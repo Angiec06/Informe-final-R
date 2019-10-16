@@ -1,0 +1,155 @@
+---
+title: "**_¿Es el alcohol la respuesta a nuestra felicidad?_**"
+author: "Angela Cantillo"
+date: "11/10/2019"
+output: 
+  pdf_document:
+  fig_caption: yes
+bibliography: bibliography.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(knitr)
+```
+
+## Introducción
+
+El consumo de alcohol muchas veces se ve como una practica inapropiada que genera muchos problemas a nivel de salud, comportamiento, depresión, etc. Diversos estudios han demostrado las desventajas a nivel cognitivo, de salud, comportamiento, entre otras, al consumir alcohol. Estos hechos han llevado a la promoción de políticas dirigidas a disminuir el consumo de este tipo de bebidas entre la población [@devilly2019big; @geiger2016can]. Sin embargo, el consumo de alcohol es una práctica común en la mayoría del mundo y, muchas veces, está asociada a costumbres tradicionales y/o culturales, siendo la interacción social una de las principales razones por las cuales se consume.
+
+A pesar de que no ser investigadas muy intensamente las razones por las cuales las personas consumen periódicamente alcohol, de forma moderada, se asume que las personas consideran el alcohol como una medida relajante que disminuye el estrés y la ansiedad, además de mejorar el estado de ánimo y promover la interacción social [@fischer2015quality; @dunbar2017functional].  En diversas partes del mundo, se consume alcohol los fines de semana, después del trabajo, en ocasiones especiales como cumpleaños, aniversarios, navidad, año nuevo, por razones laborales o solo para tener conversación entre amigos.
+
+Dunbar y colaboradores exponen dos beneficios potenciales de consumir alcohol moderadamente: primero, mejora el bienestar psicológico mediante la interacción social que, a su vez, promueve comportamientos como la risa, canto, baile, diálogos y esto, en conjunto, activa endorfinas generando un bienestar en las personas. Segundo, el consumo moderado de alcohol puede mejorar la cognición social, es decir, las personas mejoran su comportamiento social lo cual permite interacciones sociales más eficientes [@dunbar2017functional].
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+
+library(tidyverse)
+library(broom)
+Datos_crudos<-read.csv("HappinessAlcoholConsumption.csv")
+view(Datos_crudos)
+
+## selección de datos de interés ##
+
+Tabla_1<-Datos_crudos %>% select(-Hemisphere,-HDI,-GDP_PerCapita)
+
+Modelo_lm<-lm(HappinessScore~Beer_PerCapita+Spirit_PerCapita+Wine_PerCapita,data=Tabla_1)
+
+Modelo_aov<-aov(HappinessScore~Beer_PerCapita+Spirit_PerCapita+Wine_PerCapita,data=Tabla_1)
+
+Tabla_2 <- Tabla_1 %>% gather(key = Alcohol_Type, value = Liter_per_capita, -Country, -Region, -HappinessScore)
+
+Tipo_alcohol<-group_by(Tabla_2,Alcohol_Type)
+Summary.Tipo_alcohol <- summarize(Tipo_alcohol, Promedio = (mean(HappinessScore)), 
+                               Desviacion_estandar = (sd(HappinessScore)))
+```
+## Metodología
+
+Se trabajó a partir de la base de datos _Happiness and Alcohol Consumption_ obtenidos del sitio web www.kaggle.com. y elaborado por Marcos Pessotto en octubre de 2018. Esta base de datos comprendía información relacionada al estado de felicidad y consumo de alcohol en `r length(Tabla_1$Country)` paises durante el año 2016. A partir de la base de datos, se seleccionaron los siguientes datos: Puntaje de felicidad, País, Región, Cerveza _per capita_, destilado _per capita_ y vino _per capita_. Como variable de respuesta se trabajo con el puntaje de felicidad, el cual se estimó a partir de la pregunta _"¿Cómo calificaría su felicidad en una escala de 0 a 10, donde 10 es el más feliz"?_ a los encuestados.
+
+El análisis estadístico de esta base de datos se realizó haciendo uso del programa Rstudio [@EquipoR]. A partir de este programa, se utilizaron diferentes herramientas requeridas en el análisis y diseño del estudio. Primero, el paquete tidyverse fue utlizado para instalar otros paquetes necesarios para la prepresentación de los datos [@Wickham2017]. Luego, para resumir los resultados de los modelos estadísticos fue usada la librería Broom [@Robinson2019]. Además, los gráficos fueron realizados usando la herramienta ggplot2 [@Wickham2016] y las tablas fueron editadas con ayuda de la librería kableExtra [@Zhu2019]. La creación del documento fue hecha con tinytex [@Xie2019].
+ 
+
+## Resultados
+
+
+## Tipo de alcohol como respuesta a la felicidad
+
+La primera pregunta a la cual se quiso dar respuesta era si el tipo de alcohol podría tener un efecto sobre la felicidad de las personas. Para esto, se comparó la felicidad en los `r length(Tabla_1$Country)` países y se discriminó por el tipo de bebida alcohólica, siendo las categorias cerveza, destilados y vino (`r unique(Tabla_2$Alcohol_Type)`) cerveza, destilados y vino. Como se observa en la figura 1, independientemente del tipo de alcohol que se consuma, la felicidad de las personas, en promedio, es similar `r round((Summary.Tipo_alcohol[1,2]),digits = 3)`
+
+```{r, fig.cap = "Boxplot de los puntajes de felicidad con relación a los tres tipos de bebidas alcohólicas: destilados (verde), cerveza (roja) y vino (azul)."}
+
+ggplot(Tabla_2, aes(x =Alcohol_Type, y = HappinessScore )) + geom_boxplot(aes(fill= Alcohol_Type),)+ geom_jitter(size = 0.7, shape = 8) + theme_classic()
+```
+
+## Factores que podrían influir en la felicidad
+
+```{r}
+
+### Modelo lineal generalizado con Gamma ###
+M1G<-glm(HappinessScore~Alcohol_Type, data=Tabla_2, family = Gamma(link = "identity") )
+M2G<-glm(HappinessScore~Liter_per_capita, data=Tabla_2, family = Gamma(link = "identity"))
+M3G<-glm(HappinessScore~Region, data=Tabla_2, family = Gamma(link = "identity"))
+M4G<-glm(HappinessScore~Alcohol_Type + Liter_per_capita, data=Tabla_2, family = Gamma(link = "identity"))
+M5G<-glm(HappinessScore~Alcohol_Type + Region, data=Tabla_2, family = Gamma(link = "identity"))
+M6G<-glm(HappinessScore~Liter_per_capita + Region, data=Tabla_2, family = Gamma(link = "identity"))
+M7G<-glm(HappinessScore~Alcohol_Type + Liter_per_capita + Region, data=Tabla_2, family = Gamma(link = "identity"))
+
+Modelo1G <- glance(M1G) %>% dplyr::select(AIC) %>% mutate(Modelo = "M1G")
+Modelo2G <- glance(M2G) %>% dplyr::select(AIC) %>% mutate(Modelo = "M2G")
+Modelo3G <- glance(M3G) %>% dplyr::select(AIC) %>% mutate(Modelo = "M3G")
+Modelo4G <- glance(M4G) %>% dplyr::select(AIC) %>% mutate(Modelo = "M4G")
+Modelo5G <- glance(M5G) %>% dplyr::select(AIC) %>% mutate(Modelo = "M5G")
+Modelo6G <- glance(M6G) %>% dplyr::select(AIC) %>% mutate(Modelo = "M6G")
+Modelo7G <- glance(M7G) %>% dplyr::select(AIC) %>% mutate(Modelo = "M7G")
+
+Modelos_G <- bind_rows(Modelo1G, Modelo2G, Modelo3G, Modelo4G,Modelo5G,Modelo6G, Modelo7G) %>% arrange(AIC) %>% mutate(DeltaAIC = AIC-min(AIC))
+
+```
+
+Una vez se descartó el tipo de alcohol como respuesta a la felicidad de las personas, se analizaron `r length(Modelos_G$Modelo)` modelos lineales generalizados diferentes que comprendían la cantidad de alcohol consumido, el tipo de alcohol, la región en la que se vivía y sus posibles combinaciones como probables causas de la felicidad. A partir de estos modelos, se seleccionó el modelo que relacionaba la región y la cantidad de alcohol consumido como posibles causas de la felicidad de las personas (M6). Este modelo se escogió basados en el criterio de información de Akaike (Tabla 1).
+
+En la figura 2 se puede observar la relación entre la cantidad de alcohol en litros _per capita_ y el puntaje de felicidad en las `r length(unique(Tabla_1$Region))` diferentes regiones evaluadas, según el modelo seleccionado. En esta figura se puede ver que las regiones más felices son Australia y Nueva Zelanda y Norte América y la que tiene el puntaje más bajo de felicidad es África Subsahariana. Adicionalmente, se puede observar que no siempre la cantidad de alcohol consumido esta relacionado con la felicidad. Esto se puede observar en la tabla 2 y 3 donde se muestran los 10 países con mayor porcentaje de felicidad y los diez primeros países con mayor consumo de alcohol _per capita_, respectivamente. Al comparar estas tablas, se observa que los países con mayor consumo de alcohol difieren con los países más felices.  
+
+
+
+
+
+```{r echo = FALSE, warning = FALSE, message = FALSE}
+library(kableExtra)
+kable(Modelos_G, caption = "Valores de AIC de los diferentes modelos propuestos.") %>%
+kable_styling(latex_options = "striped", full_width = F)
+```
+
+
+
+
+
+
+```{r fig.cap= "Puntaje de felicidad respecto a la cantidad de litros de alcohol en litros per capita en las nueve regiones del mundo."}
+fig_cap <- captioner::captioner(prefix = "Figura", auto_space = TRUE, levels = 1, type = NULL, infix = ".")
+Tabla_3<-Tabla_2 %>% mutate(log_liter=log(Liter_per_capita))
+ggplot(Tabla_3, aes(x = log_liter, y = HappinessScore)) + stat_smooth(method = "glm", formula = y ~ I(x^2) + x) + geom_point() + facet_wrap(~ Region) + theme_bw()
+
+```
+
+```{r echo = FALSE, warning = FALSE, message = FALSE}
+Paises<-group_by(Tabla_2,Country)
+Paises2<-summarize(Paises,Liters_per_capita=sum(Liter_per_capita),felicidad=mean(HappinessScore)) 
+Paises2 <- arrange(Paises2, -felicidad)
+Paises3 <- Paises2%>% filter(felicidad >= 7.290)
+kable(Paises3, caption = "Lista de los primeros diez paises con mayor puntaje de felicidad.") %>%
+kable_styling(latex_options = "striped", full_width = F)
+```
+
+```{r echo = FALSE, warning = FALSE, message = FALSE}
+
+Paises4 <- arrange(Paises2, -Liters_per_capita)
+Paises4 <-Paises4 %>% filter(Liters_per_capita >= 600)
+kable(Paises4, caption = "Lista de los primeros diez paises con mayor consumo de alcohol - litros per capita.") %>%
+kable_styling(latex_options = "striped", full_width = F)
+```
+
+```{r echo = FALSE, warning = FALSE, message = FALSE}
+
+tabla.M6G<-broom::tidy(glm(M6G))
+Tabla1_M6G<-tabla.M6G %>% select(term, estimate,p.value)
+kable(Tabla1_M6G, caption = "Parámetros estadísticos del modelo seleccionado.") %>%
+kable_styling(latex_options = "striped", full_width = F)
+```
+
+No obstante, segun resultados del modelo seleccionado, tanto la cantidad de alcohol, como 7 de las nueve regiones evaluadas presentan una correlación estadísticamente significativa con el puntaje de felicidad (_p< 0,05_) (ver Tabla 2). 
+
+## Discusión
+
+Los resultados en este proyecto mostraron que el tipo de alcohol no tiene un efecto diferencial en la felicidad de las personas. Hasta el momento, no se ha reportado ningún estudio científico que demuestre que los distintos tipos de bebidas alcohólicas tengan un efecto benéfico, en relación con otras, sobre la felicidad de las personas. Si bien, se han evaluado las propiedades antioxidantes o benéficas que pueden traer los distintos componentes de estas sobre la salud, no se ha demostrado cómo estos contribuyen a la percepción de felicidad de las personas.
+Por otro lado, en este estudio, la cantidad de alcohol que se consume y la región en la que se vive, sí tienen un efecto estadísticamente significativo en la felicidad de las personas. En cuanto a la cantidad de alcohol, diversos estudios han demostrado que el vínculo social de los primates esta ligado con el sistema de endorfinas [@dunbar2017functional] y se sabe que el consumo de alcohol moderado puede fomentar las relaciones sociales. Por lo cual, de una forma indirecta, el consumo de alcohol moderado puede generar un mayor bienestar social que se ve reflejado en la felicidad de las personas. Sin embargo, otros estudios han demostrado que el nivel de felicidad no esta asociado con el consumo de alcohol al comparar consumidores moderados de alcohol y no consumidores y que, por el contrario, el consumo puede traer efectos negativos en el nivel de satisfacción de una persona [@koivumaa2012self].  
+
+No obstante, es necesario tener en cuanta que la felicidad es un estado anímico complejo que está relacionado con el nivel de bienestar y que este, a su vez, es una percepción subjetiva que depende de diversos factores tales como el estado físico, social, económico, familiar, académico, laborar, entre otros [@kuroki2017does]. Esto podría explicar porque las diferentes regiones analizadas en este estudio son estadísticamente significativas; factores culturales y sociales, entre muchos otros, también podrían estar influyendo en la percepción de felicidad de las personas encuestadas, pero estos factores no se tuvieron en cuenta en este estudio.
+Teniendo en cuenta esto, si bien los factores analizados en este estudio pueden tener una repercusión en la felicidad de una persona, esta felicidad esta asociada a un sin número de factores que están fuera del modelo propuesto es este análisis y que podría dar origen a una mejor comprensión de la percepción de felicidad de las personas. De este modo, el alcohol y la región, si bien son factores significantes, no explican por si solos este estado de los individuos. 
+
+## Conclusiones
+
+Basados en el concepto preestablecido en la cotidianidad de las personas, se ha supuesto que el consumo de alcohol está asociado con un mayor incremento de la felicidad en los individuos. Sin embargo, en este estudió que evaluó si el consumo de tres diferentes tipos de alcohol  (en litros per capita) en 122 paises de nueve regiones estaba relacionado con un puntaje más alto de felicidad, se demostró que no hubo una diferencia significativa de los valores de felicidad con respecto a un mayor consumo de cualquier tipo de alcohol.Por otro lado, al evaluar si la felcidad dependía de la región donde se evaluara, resultó que si existe una correlación entre la felicidad y la zona del mundo testeada.
+
+## Bibliografía
